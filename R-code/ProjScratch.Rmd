@@ -1,0 +1,355 @@
+---
+title: "Housing Data Analysis"
+author: "Max Wang 1011602222, Divy Wadhwani 1011361544"
+date: "2025-03-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+### **1. Data and Background Research**
+
+The data used for this analysis comes from various sources under the purview of the Government of Ontario and other related agencies, spanning multiple years and focusing on different aspects of the housing market and household finances. The first dataset, **Housing Market Indicators from 1990–2016**, contains information on housing costs, housing supply, and other market metrics that help planners and policymakers understand long-term trends and fluctuations in the Ontario housing market. The second dataset, **Average Household Income (Post-Tax) from 2006–2022**, breaks down income levels for both renters and homeowners, providing insights into household financial health and disposable income over time.
+
+Additionally, the **Residential Mortgage Credit Outstanding by Financial Institution Type** data set compiles mortgage debt trends, sorted by the type of credit institution, allowing analysts to identify lending patterns and assess financial stability in the residential mortgage sector. Finally, the **Affordable Residential Units** data set—published by the Government of Ontario—outlines market-based average prices, rent thresholds, and income-based criteria that determine whether a residential unit is exempt from certain charges. This information not only supports municipal planning for affordable housing but also allows researchers to compare governmental estimations of affordability against actual market valuations.
+
+Together, these data sets provide a comprehensive view of Ontario’s housing landscape. They are regularly used by researchers, policymakers, urban planners, and financial institutions to evaluate housing affordability, inform development charge policies, assess mortgage lending trends, and shape data-driven decisions in housing and community planning. By analyzing these varied yet interconnected indicators, stakeholders can develop more targeted strategies for addressing housing challenges and supporting equitable growth across Ontario.
+
+We merged data from **Housing Market Indicators from 1990–2016**, A**verage Household Income (Post-Tax) from 2006–2022**, and **Residential Mortgage Credit Outstanding by Financial Institution Type** over the intersection of their periods(2002-2016) into one cumulative dataset. We analyze Affordable Residential Units separately.
+
+### 2. Dataset Information
+
+#### 1. Affordable Residential Units.
+
+```{r, echo = FALSE}
+names(ARU)
+```
+
+-   **Id\
+    ** Unique identifier for the record.
+
+-   **Municipality\
+    ** The city or local government area to which the data applies.
+
+-   **Tier\
+    ** A classification or ranking level of the municipality, possibly based on size or affordability metrics.
+
+-   **Region\
+    ** The broader geographical area or administrative region the municipality belongs to.
+
+-   **Affordable purchase price of a detached house\
+    **The maximum price of a detached house is considered affordable based on standard thresholds.
+
+-   **Affordable purchase price of a semi detached house\
+    ** The affordable price limit for a semi-detached house.
+
+-   **Affordable purchase price of a row townhouse\
+    ** The affordable purchase price for a row or townhouse unit.
+
+-   **Affordable purchase price of a condominium apartment\
+    ** The maximum affordable purchase price for a condo apartment.
+
+-   **Purchase price based on income\
+    ** The home purchase price is calculated as affordable based on average or median income.
+
+-   **90 percent of the average purchase price of a detached house\
+    ** 90% of the market average price for a detached house is used as a relative affordability benchmark.
+
+-   **90 percent of the average purchase price of a semi detached house\
+    ** 90% of the average price for semi-detached homes.
+
+-   **90 percent of the average purchase price of a row townhouse\
+    ** 90% of the average price for row or townhouses.
+
+-   **90 percent of the average purchase price of a condominium apartment\
+    ** 90% of the average market price for condos.
+
+-   **Average purchase price of a detached house\
+    ** The average market price of a detached house.
+
+-   **Average purchase price of a semi detached house\
+    ** The average market price of a semi-detached house.
+
+-   **Average purchase price of a row townhouse\
+    ** The average market price of a row/townhouse.
+
+-   **Average purchase price of a condominium apartment\
+    ** The average market price of a condo apartment.
+
+-   **The threshold used for a detached house and substitution\
+    ** The affordability threshold or metric used for detached homes, including any adjustments/substitutions.
+
+-   **The threshold used for a semi detached house and substitution\
+    ** The threshold value is used for semi-detached houses and any applied substitutions.
+
+-   **Threshold used for a row townhouse and substitution\
+    ** The threshold used for row/townhouses including any substitution criteria.
+
+-   **Threshold used for a condominium apartment and substitution\
+    ** The affordability threshold for condos, including substitution logic if applicable.
+
+-   **Affordable monthly rent of a bachelor unit\
+    ** The maximum rent for a bachelor unit considered affordable based on income.
+
+-   **Affordable monthly rent of a 1 bedroom unit\
+    ** The affordable rent threshold for one-bedroom apartments.
+
+-   **Affordable monthly rent of a 2 bedroom unit\
+    ** The affordable rent threshold for two-bedroom apartments.
+
+-   **Affordable monthly rent of a 3+ bedroom unit\
+    ** The maximum rent considered affordable for units with 3 or more bedrooms.
+
+-   **Rent based on income\
+    ** The rent level calculated as affordable based on income metrics.
+
+-   **Average market rent of a bachelor unit\
+    ** The actual average market rent for a bachelor apartment.
+
+-   **Average market rent of a 1 bedroom unit\
+    ** The average market rent for one-bedroom units.
+
+-   **Average market rent of a 2 bedroom unit\
+    ** The average market rent for two-bedroom units.
+
+-   **Average market rent of a 3+ bedroom unit\
+    ** The average rent for larger units with three or more bedrooms.
+
+-   **Threshold used for a bachelor unit and substitution\
+    ** The rent affordability threshold for bachelor units, including any adjustments or substitutions.
+
+-   **Threshold used for a 1 bedroom unit and substitution\
+    ** The threshold used for one-bedroom units, possibly including substitution logic.
+
+-   **Threshold used for a 2 bedroom unit and substitution\
+    ** Threshold value applied to two-bedroom rentals for affordability purposes.
+
+-   **Threshold used for a 3+ bedroom unit and substitution\
+    ** The rent affordability threshold for large rental units (3+ bedrooms), including substitutions.
+
+#### 2. Merged Data:
+
+```{r, echo = False}
+names(d)
+```
+
+*Column wise Information:*
+
+-   **Year\
+    ** The calendar year in which the data was recorded.
+
+-   **No of constructions started\
+    ** The number of new residential construction projects initiated during the year.
+
+-   **Available Supply\
+    ** The total supply of housing units available in the market.
+
+-   **Rental vacancy rate\
+    ** The percentage of rental units that were unoccupied at the time of measurement.
+
+-   **Rental availability rate\
+    ** The percentage of rental units available for rent, including both vacant and soon-to-be-vacant units.
+
+-   **New Housing Price Index change\
+    ** The annual percentage change in the price index for newly built houses.
+
+-   **Teranet National Bank House Price Index change\
+    ** The annual percentage change in the resale housing price index compiled by Teranet and National Bank.
+
+-   **Consumer Price Index change\
+    ** The year-over-year percentage change in the Consumer Price Index, a measure of inflation.
+
+-   **Owned accommodation costs change\
+    ** The percentage change in the cost of owning a home, including mortgage interest, property taxes, and maintenance.
+
+-   **Rental accommodation costs change\
+    ** The percentage change in the cost of renting a home.
+
+-   **Cumulative Average rent\
+    ** The cumulative average rent calculated over a certain period, likely across all unit sizes.
+
+-   **Bachelor Average Rent\
+    ** The average rent for bachelor (studio) apartments.
+
+-   **One Bedroom Average Rent\
+    ** The average rent for one-bedroom rental units.
+
+-   **Two Bedroom Average Rent\
+    ** The average rent for two-bedroom rental units.
+
+-   **Population on July 1 thousands\
+    ** The population on July 1 of the given year, expressed in thousands.
+
+-   **Labour force participation rate\
+    ** The percentage of the working-age population that is either employed or actively seeking employment.
+
+-   **Employment change\
+    ** The year-over-year change in employment levels.
+
+-   **Unemployment rate\
+    ** The percentage of the labor force that is unemployed and actively looking for work.
+
+-   **Net migration\
+    ** The difference between the number of people entering and leaving the region (immigration minus emigration).
+
+-   **Outstanding Mortgage\
+    ** The total value of unpaid mortgage loans at a given point in time.
+
+-   **Income Renter\
+    ** The average or median income of individuals or households that rent their homes.
+
+-   **Income Owner\
+    ** The average or median income of individuals or households that own their homes.
+
+-   **Housing delta\
+    **A derived metric representing a change or difference in a housing-related indicator (such as the gap between renter and owner income or affordability metrics).\
+
+### **3. Overall Research Question**
+
+```{r, echo=FALSE}
+HMI = read.csv("~/Housing Factors - Housing Factors (1).csv")
+OM = read.csv("Outstanding-Mortgages.csv")
+AHI = read.csv("Avg-Household-Income-by-type.csv")
+
+HMI = na.omit(HMI %>% filter(Year %in% c(2006:2016)))
+d = left_join(HMI, OM, by="Year")
+AHI = AHI %>% pivot_wider(id_cols = Year, names_from = Ownership, names_prefix = "Income_", values_from = Income)
+d = left_join(d, AHI, by="Year")
+
+d = d %>% mutate(housing_delta = No.of.constructions.started - Net.migration)
+
+```
+
+### **Graphs**
+
+```{r, echo=FALSE}
+ggplot(data = d, aes(x = Year)) + geom_point(aes(y = housing_delta), col="red") + 
+  labs(title = "Housing Delta vs Year") + ylab("Housing Delta")
+```
+
+Here, Housing Delta is a feature we engineered to study whether newer spaces could sustain the influx of immigrants into Toronto. It is the difference between the number of new housing projects started versus the number of new migrations to Toronto. Interestingly, housing delta is heavily negative every year in the decade since 2006 except 2015, which means new housing spaces were unable to catch up with the number of immigrants to Toronto. Also, the greatest difference in the housing delta on an year to year basis is from 2015 to 2016.
+
+```{r, echo = FALSE}
+ggplot(data = d, aes(x = Year, y = Cumulative.Average.rent....)) + geom_point() +
+  geom_line() +
+  labs(title = "Cumulative Average Rent Prices vs Year") + 
+  ylab("Cumulative Average Rent Prices")
+```
+
+Cumulative Average Rent Prices refer to the sum of the average rent prices of three different types of settlements: A bachelor, A one-bedroom, and a two-bedroom. Overall, rent prices increased steadily throughout the decade. We believe this happened due to a multitude of reasons, including, but not limited to, the immigrant influx, the dearth of housing resources, and a rise in population. We will study the significance of these factors later in our report.
+
+```{r, echo = FALSE}
+# Change in Income of Renters and Owners vs Year
+ggplot(d, aes(x = Year)) + geom_line(aes(x = Year, y = Income_Renter, color = "Renter Income")) + geom_line(aes(x = Year, y = Income_Owner, color = "Owner Income")) + labs(title = "Change in Income of Renters and Owners vs Year", color = "Legend") + ylab("Income")
+```
+
+This graph represents the incomes of Owners and Renters over the decade. Interestingly, owner income consistently stays double as compared to renter income. highliting the deep economic disparity between homeowners and renters. While owner income fluctuates, plateauing in 2013 before an increasing trend since 2015, renter income has been on a steady rise since 2011. \## Regression
+
+```{r, echo = FALSE}
+data = read.csv("~/rentfaster.csv")
+data = na.omit(data)
+data = data %>% filter(city == "Toronto")
+data = data %>% select(latitude,longitude,lease_term,price,beds,baths,sq_feet,link, furnishing, availability_date, smoking, cats, dogs)
+str(data)
+```
+
+## Processing the data
+
+```{r, echo = FALSE}
+# Encoding Beds
+data <- data %>%
+  mutate(beds = case_when(
+    beds == "Studio"  ~ 0,
+    beds == "1 Bed"   ~ 1,
+    beds == "2 Beds"  ~ 2,
+    beds == "3 Beds"  ~ 3,
+    beds == "4 Beds"  ~ 4,
+    beds == "5 Beds"  ~ 5,
+    beds == "6 Beds"  ~ 6,
+    TRUE              ~ NA_real_
+  ))
+#Encoding furnishing
+data = data %>% mutate(furnishing = case_when(furnishing == "Unfurnished" ~ 0, furnishing == "Furnished" ~ 1, furnishing == "Negotiable" ~ 2))
+
+#Encoding Lease Term
+
+data = data %>% mutate(lease_term = case_when(lease_term == "Long Term" ~ 0, lease_term == "Short Term" ~ 1, lease_term == "Negotiable" ~ 2))
+unique(data$lease_term)
+#Encoding baths and sq_feet
+data = data %>% mutate(baths = as.numeric(baths), sq_feet = as.numeric(sq_feet))
+# Dropping Link
+data <- data %>% select(-link)
+
+#Encoding availibility date
+data = data %>% mutate(availability_date = case_when(availability_date == "Immediate"~ 0, availability_date == "Call for Availability"~1, TRUE ~ 2))
+
+#Encoding smoking
+data = data %>% mutate(smoking = case_when(smoking == "Non-Smoking"~0, smoking == "Smoke Free Building" ~ 1, smoking == "Smoking Allowed" ~ 2, smoking == "Negotiable" ~ 3, TRUE ~ NA_real_))
+
+#Encoding cats
+#Encoding dogs
+data <- data %>%
+  mutate(
+    cats = case_when(
+      cats == "True"  ~ 1,
+      cats == "False" ~ 0,
+      TRUE            ~ NA_real_
+    ),
+    dogs = case_when(
+      dogs == "True"  ~ 1,
+      dogs == "False" ~ 0,
+      TRUE            ~ NA_real_
+    )
+  )
+data = na.omit(data)
+
+```
+
+## Cross Validation
+
+We do a 70-30 split between the train and the test data.
+
+```{r}
+data=data %>% mutate(group_ind = sample(c("train","test"),
+size=nrow(data),
+prob = c(0.7,0.3),
+replace = T))
+
+```
+
+## Modelling
+
+```{r}
+# Filter training data
+train_data <- data %>% filter(group_ind == "train")
+# Model, exclude group ind as it is not a predictor
+model <- lm(price ~ ., data = train_data %>% select(-group_ind))
+# View summary of the model
+summary(model)
+```
+
+## Evaluating with MSE and RMSE on test set
+
+```{r}
+test_data  <- data %>% filter(group_ind == "test")
+y_hat <- predict(model, newdata = test_data)
+y <- test_data$price
+mse <- mean((y - y_hat)^2)
+rmse = sqrt(mse)
+mse; rmse
+```
+
+The model's performance on the test set was evaluated using Mean Squared Error (MSE) and Root Mean Squared Error (RMSE). The MSE was approximately 284,070, indicating the average squared difference between the predicted and actual rental prices. Taking the square root of this value, the RMSE was approximately \$533, which provides a more interpretable measure of prediction error in the same units as the target variable (rental price). Given that the median rent in the dataset is around \$2,635, this implies the model's predictions deviate from actual prices by about 20% on average. While this is a reasonable level of accuracy for housing data—where pricing can be influenced by many subtle or unobserved factors—the result also suggests potential gains from model tuning or incorporating additional features. A warning about rank deficiency was noted, indicating that one or more predictors lacked sufficient variation and were excluded from the model, which may have impacted prediction stability.
+
+## Interpreting the regression parameters
+
+The linear regression model demonstrates a strong fit, with an adjusted R² of 0.7375, indicating that approximately 74% of the variance in rental prices is explained by the selected features. Key predictors of rental price include square footage, number of bedrooms, and number of bathrooms, all of which have statistically significant positive effects on price. Specifically, each additional square foot adds approximately \$2.24 to the rent, while each bedroom and bathroom contribute an estimated \$196 and \$348, respectively. Furnished units, long-term leases, and immediate availability are also associated with higher rental prices. Allowing cats slightly increases rent, though this effect is only marginally significant. Notably, the dogs variable was excluded from the model due to lack of variation in the training data. Overall, the model provides meaningful insights into the key factors driving rental pricing and performs well in capturing underlying trends in the data.
+
+# Scratch
+
+```{r}
+summary(data$price)
+```
