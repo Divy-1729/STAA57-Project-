@@ -1,0 +1,259 @@
+---
+title: "STAA57 Group Project"
+author: "Max Wang 1011602222"
+date: "2025-04-02"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(knitr)
+library(simputation)
+HVS = read.csv("COVID-19_Hospitalizations_by_Vaccination_Status.csv")
+VC = read.csv("COVID-19_Vaccinations_Cases.csv") 
+zones = read.csv("COVID-19_Zones.csv")
+outbreaks = read.csv("COVID-19_Outbreaks.csv")
+cases = read.csv("2021_reported_COVID-19_Cases.csv")
+VN = read.csv("COVID-19_Vaccinations_Numbers.csv")
+
+VC = VC %>% select(X_id, Date, covid19_cases_unvac, covid19_cases_partial_vac, covid19_cases_full_vac)
+VG = VN %>% filter(!(Agegroup %in% c("Adults_18plus", "Ontario_12plus", 
+"Ontario_5plus", "Undisclosed_or_missing"))) %>% group_by(Date) %>% summarize(
+  un_vac = sum(Total.population) - sum(At.least.one.dose_cumulative),
+  partial_vac = sum(At.least.one.dose_cumulative), 
+  full_vac = sum(fully_vaccinated_cumulative),
+  population = sum(Total.population))
+VC = left_join(VC, VG, by="Date")
+
+#imputing missing values in VC
+VC = impute_lm(VC, covid19_cases_unvac~un_vac + I(un_vac^2) + I(un_vac^3) + covid19_cases_full_vac + population)
+
+VC = impute_lm(VC, covid19_cases_partial_vac~partial_vac + I(partial_vac^2) + covid19_cases_full_vac)
+```
+
+## Overall Research Question:
+
+-   How did Ontario react to outbreaks of COVID-19?
+
+-   Did COVID-19 vaccines reduce the likelihood of getting infected?
+
+-   Did COVID-19 vaccines reduce infection severity?
+
+    -   If so, by how much?
+
+        -   Is there a difference between partially vaccinated and fully vaccinated individuals?
+
+## Tables
+
+Average number of outbreaks for each zone type:
+
+```{r, echo=FALSE, warning=FALSE}
+options(dplyr.summarise.inform = FALSE)
+outbreaks_grouped = outbreaks %>% group_by(phu_name, date) %>% 
+  summarize(numOutbreaks = sum(number_ongoing_outbreaks)) %>% 
+  arrange(phu_name, date) %>% rename(Reporting_PHU=phu_name, start_date=date)
+zones = zones %>% arrange(Reporting_PHU, start_date)
+zones_with_outbreaks = left_join(zones, outbreaks_grouped, by="start_date")
+tbl = zones_with_outbreaks %>% group_by(Status_PHU) %>% rename(Status=Status_PHU) %>%
+  summarize(Outbreaks = mean(numOutbreaks)) %>% arrange(desc(Outbreaks))
+kable(tbl)
+```
+
+## Graphs
+
+```{r, echo=FALSE}
+#Note: Graph VG
+
+```
+
+## Bootstrapping, Confidence Interval and Test of Hypothesis
+
+#### Test of Hypothesis:
+
+Comparing the proportion of COVID-19 cases in unvaccinated compared to vaccinated individuals:
+
+$H_0: \pi_\text{unvac} = \pi_\text{vac}$
+
+$H_a: \pi_\text{unvac} > \pi_\text{vac}$
+
+```{r, echo=FALSE}
+x = c(sum(VC$covid19_cases_unvac, na.rm=T), sum(VC$covid19_cases_partial_vac, na.rm=T))
+n = c(sum(VC$un_vac), sum(VC$partial_vac))
+
+prop.test(x, n, alternative="greater")
+```
+
+As the p-value of $p = 2.2e^{-16} < 0.001$ is very small, we have very strong evidence against the null hypothesis that the proportions of COVID-19 cases between unvaccinated and vaccinated individuals are the same. This supports our alternate hypothesis that the proportion of COVID-19 cases in unvaccinated individuals is higher compared to vaccinated individuals.
+
+Comparing the proportion of ICU COVID-19 cases between unvaccinated and vaccinated individuals:
+
+$H_0: \pi_\text{unvac} = \pi_\text{vac}$
+
+$H_a: \pi_\text{unvac} > \pi_\text{vac}$
+
+```{r, echo=FALSE}
+HVS = HVS %>% mutate(hospital_unvac = icu_unvac + hospitalnonicu_unvac,
+                     hospital_partial_vac = icu_partial_vac + hospitalnonicu_partial_vac,
+                     hospital_full_vac = icu_full_vac + hospitalnonicu_full_vac)
+
+HVS_VC = inner_join(HVS, VC, by=c("date"="Date"))
+
+
+x = c(sum(HVS_VC$icu_unvac), sum(HVS_VC$icu_partial_vac) + sum(HVS_VC$icu_full_vac))
+n = c(sum(HVS_VC$hospital_unvac), sum(HVS_VC$hospital_partial_vac) + sum(HVS_VC$hospital_full_vac))
+
+prop.test(x, n, alternative="greater")
+```
+
+As the p-value of $p = 2.2e^{-16} < 0.001$ is very small, we have very strong evidence against the null hypothesis that the proportion of ICU COVID-19 cases between unvaccinated and vaccinated individuals are the same. This supports our alternative hypothesis that the proportion of severe COVID-19 cases in unvaccinated individuals is higher compared to vaccinated individuals.
+
+Comparing the proportion of ICU COVID-19 cases between partially and fully vaccinated individuals:
+
+$H_0: \pi_\text{partial vac} = \pi_\text{fully vac}$
+
+$H_a: \pi_\text{partial vac} > \pi_\text{fully vac}$
+
+```{r, echo=FALSE}
+x = c(sum(HVS_VC$icu_partial_vac), sum(HVS_VC$icu_full_vac))
+n = c(sum(HVS_VC$hospital_partial_vac), sum(HVS_VC$hospital_full_vac))
+
+prop.test(x, n, alternative="greater")
+
+sum(HVS_VC$icu_unvac + HVS_VC$icu_partial_vac + HVS_VC$icu_full_vac) / sum(
+  HVS_VC$hospital_unvac + HVS_VC$hospital_partial_vac + HVS_VC$hospital_full_vac) 
+```
+
+As the p-value of $p = 2.2e^{-16} < 0.001$ is very small, we have very strong evidence against the null hypothesis that the proportion of ICU COVID-19 cases between partially and fully vaccinated individuals are the same. This supports our alternative hypothesis that the proportion of severe COVID-19 cases in partially individuals is higher compared to fully vaccinated individuals.
+
+#### Bootstrapping and Confidence Interval:
+
+From research done by Public Health Ontario, up to June 14, 2022, the mortality rate of COVID-19 in Ontario was 1.0%. However, Ontario changed their methodology in reporting COVID-19 deaths to "exclude deaths not caused by COVID". We see if this change shows an initial over-reporting in the COVID-19 mortality rate. 
+
+$H_0: \pi = 0.01$
+
+$H_a: \pi < 0.01$
+
+We calculated the following 95% confidence interval for the fatality rate of COVID-19:
+
+```{r, echo=FALSE}
+cases = cases %>% mutate(is_fatal = case_when(Outcome1 == "FATAL" ~ 1, T~0))
+mu_ho = 0.01
+
+boot_function = function() {
+  return(mean(sample(cases$is_fatal, size=length(cases$is_fatal), replace=T)))
+}
+
+set.seed(57)
+boot_x_bar = replicate(100, boot_function())
+
+quantile(boot_x_bar, c(0, 0.95))
+```
+
+As 0.01 is not within the 95% confidence interval, we reject the null hypothesis that the COVID-19 mortality rate is 1.0%. This supports our altenative hypothesis that deaths were initially incorrectly attributed to COVID-19. 
+
+## Appendix
+
+```{r, eval=FALSE}
+#Load required libraries
+library(tidyverse)
+library(knitr)
+
+#Load datasets
+HVS = read.csv("COVID-19_Hospitalizations_by_Vaccination_Status.csv")
+VC = read.csv("COVID-19_Vaccinations_Cases.csv")
+zones = read.csv("COVID-19_Zones.csv")
+outbreaks = read.csv("COVID-19_Outbreaks.csv")
+cases = read.csv("2021_reported_COVID-19_Cases.csv")
+VN = read.csv("COVID-19_Vaccinations_Numbers.csv")
+
+#Remove summarise warning statements
+options(dplyr.summarise.inform = FALSE)
+
+#Creating summary statistics of outbreaks by date and PHU
+outbreaks_grouped = outbreaks %>% group_by(phu_name, date) %>% 
+  summarize(numOutbreaks = sum(number_ongoing_outbreaks)) %>% 
+  arrange(phu_name, date) %>% rename(Reporting_PHU=phu_name, start_date=date)
+
+#Sort zones by Reporting_PHU and start_date
+zones = zones %>% arrange(Reporting_PHU, start_date)
+
+#Merging datasets together
+zones_with_outbreaks = left_join(zones, outbreaks_grouped, by="start_date")
+
+#Arranging data into a neat table format
+tbl = zones_with_outbreaks %>% group_by(Status_PHU) %>% rename(Status=Status_PHU) %>%
+  summarize(Outbreaks = mean(numOutbreaks)) %>% arrange(desc(Outbreaks))
+
+#Displaying table
+kable(tbl, "pipe")
+
+##Graphs code here?
+#Grouping individuals by vaccination status
+VG = VN %>% filter(!(Agegroup %in% c("Adults_18plus", "Ontario_12plus", 
+"Ontario_5plus", "Undisclosed_or_missing"))) %>% group_by(Date) %>% summarize(
+  un_vac = sum(Total.population) - sum(At.least.one.dose_cumulative),
+  partial_vac = sum(At.least.one.dose_cumulative), 
+  full_vac = sum(fully_vaccinated_cumulative),
+  population = sum(Total.population))
+
+#Hypothesis testing
+
+#Proportion of COVID-19 cases between unvaccinated and vaccinated individuals
+#Filtering empty observations out
+VC = left_join(VC, VG, by="Date") %>% filter(full_vac != 0)
+
+x = c(sum(VC$covid19_cases_unvac, na.rm=T), sum(VC$covid19_cases_partial_vac, na.rm=T))
+n = c(sum(VC$un_vac), sum(VC$partial_vac))
+
+#Conduct prop-test
+prop.test(x, n, alternative="greater")
+
+#Proportion of serious COVID-19 cases between unvaccinated and vaccinated individuals
+#Merging datasets
+HVS_VC = inner_join(HVS, VC, by=c("date"="Date")) %>% 
+  filter(covid19_cases_unvac != "", covid19_cases_partial_vac != "")
+
+
+x = c(sum(HVS_VC$icu_unvac), sum(HVS_VC$icu_partial_vac) + sum(HVS_VC$icu_full_vac))
+n = c(sum(HVS_VC$covid19_cases_unvac), sum(HVS_VC$covid19_cases_partial_vac) + sum(HVS_VC$covid19_cases_full_vac))
+
+#Conduct prop-test
+prop.test(x, n, alternative="greater")
+
+#Proportion of serious COVID-19 cases between partially and fully vaccinated individuals
+#Removing empty observations
+HVS_VC = HVS_VC %>% filter(covid19_cases_full_vac != "")
+
+x = c(sum(HVS_VC$icu_partial_vac), sum(HVS_VC$icu_full_vac))
+n = c(sum(HVS_VC$covid19_cases_partial_vac), sum(HVS_VC$covid19_cases_full_vac))
+
+#Conduct prop-test
+prop.test(x, n, alternative="greater")
+
+#Bootstrapping and Confidence Interval
+#Adding simple binary variable to represent fatal cases of covid
+cases = cases %>% mutate(is_fatal = case_when(Outcome1 == "FATAL" ~ 1, T~0))
+fatal_cases = cases$is_fatal
+obs_mean = mean(fatal_cases)
+mu_ho = obs_mean #or do I put 0.008 and actually do the change of mean?
+
+new_x = fatal_cases - obs_mean + mu_ho
+
+#Creating boot function
+boot_function = function() {
+  return(mean(sample(new_x, size=length(new_x), replace=T)))
+}
+
+#Setting seed for consistency
+set.seed(57)
+boot_x_bar = replicate(100, boot_function())
+
+#Calculating 95% confidence interval
+quantile(boot_x_bar, c(0.025, 0.975))
+```
